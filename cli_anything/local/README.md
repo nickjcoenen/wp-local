@@ -73,6 +73,9 @@ wp-local log tail my-site php
 # Show last 100 lines of a log
 wp-local log show my-site nginx -n 100
 
+# Create a new site (interactive)
+wp-local site add
+
 # Set a default active site for the session
 wp-local session use my-site
 
@@ -96,7 +99,24 @@ wp-local db query "SELECT option_value FROM wp_options WHERE option_name='siteur
 | `site restart <SITE>` | Restart a site via GraphQL. |
 | `site info [SITE]` | Full details: path, services, ports, PHP/MySQL/nginx versions. |
 | `site rename <SITE> <NAME>` | Rename a site via GraphQL. |
-| `site add` | Interactive wizard to create a new site. |
+| `site add` | Interactive wizard to create a new site (see below). |
+
+#### `site add` — interactive prompts
+
+`site add` takes no arguments. Run it and answer the prompts:
+
+```
+$ wp-local site add
+Site name: my-blog
+Site path [/your/custom/install/path/my-blog]:
+Domain [my-blog.test]:
+WP admin username [admin]:
+WP admin password:
+WP admin email [you@example.com]:
+PHP version (leave blank for default):
+```
+
+Defaults for **site path**, **domain TLD**, and **admin email** are read from Local's own new-site settings (`Settings → New Site Defaults` in the app), so they stay in sync automatically. Only the admin password has no default.
 
 ### `wp`
 
