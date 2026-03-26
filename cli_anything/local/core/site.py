@@ -32,6 +32,8 @@ def get_new_site_defaults() -> dict:
         tld          — default TLD (e.g. '.test', '.local')
     """
     raw = _read_json(NEW_SITE_DEFAULTS_JSON)
+    if not isinstance(raw, dict):
+        raw = {}
     return {
         "sites_path": raw.get("sitesPath", ""),
         "admin_email": raw.get("adminEmail", ""),

@@ -274,7 +274,7 @@ def site_add():
 
         sites_path = defaults["sites_path"] or "~/Local Sites"
         default_path = os.path.join(sites_path, name)
-        path = click.prompt("Site path", default=default_path)
+        path = os.path.expanduser(click.prompt("Site path", default=default_path))
 
         tld = defaults["tld"] or ".local"
         domain = click.prompt("Domain", default=f"{slug}{tld}")

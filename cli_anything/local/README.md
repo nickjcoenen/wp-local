@@ -105,7 +105,7 @@ wp-local db query "SELECT option_value FROM wp_options WHERE option_name='siteur
 
 `site add` takes no arguments. Run it and answer the prompts:
 
-```
+```text
 $ wp-local site add
 Site name: my-blog
 Site path [/your/custom/install/path/my-blog]:
