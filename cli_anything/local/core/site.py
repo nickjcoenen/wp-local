@@ -10,6 +10,7 @@ import os
 APPDATA = os.path.expanduser("~/Library/Application Support/Local")
 SITES_JSON = os.path.join(APPDATA, "sites.json")
 SITE_STATUSES_JSON = os.path.join(APPDATA, "site-statuses.json")
+NEW_SITE_DEFAULTS_JSON = os.path.join(APPDATA, "settings-new-site-defaults.json")
 RUN_DIR = os.path.join(APPDATA, "run")
 
 
@@ -20,6 +21,24 @@ def _read_json(path: str) -> dict:
             return json.load(fh)
     except (FileNotFoundError, PermissionError, json.JSONDecodeError):
         return {}
+
+
+def get_new_site_defaults() -> dict:
+    """Return the user's new-site defaults from Local's settings.
+
+    Keys (all optional, may be empty string):
+        sites_path   — default install directory
+        admin_email  — default WP admin email
+        tld          — default TLD (e.g. '.test', '.local')
+    """
+    raw = _read_json(NEW_SITE_DEFAULTS_JSON)
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "sites_path": raw.get("sitesPath", ""),
+        "admin_email": raw.get("adminEmail", ""),
+        "tld": raw.get("tld", ".local"),
+    }
 
 
 def list_sites_from_file() -> list[dict]:

@@ -6,6 +6,7 @@ Entry point: wp-local (registered via setup.py console_scripts)
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -265,12 +266,22 @@ def site_rename(site_id, name):
 def site_add():
     """Create a new Local site interactively."""
     try:
+        from cli_anything.local.core.site import get_new_site_defaults
+        defaults = get_new_site_defaults()
+
         name = click.prompt("Site name")
-        path = click.prompt("Site path", default=f"~/Local Sites/{name}")
-        domain = click.prompt("Domain", default=f"{name.lower().replace(' ', '-')}.local")
+        slug = name.lower().replace(" ", "-")
+
+        sites_path = defaults["sites_path"] or "~/Local Sites"
+        default_path = os.path.join(sites_path, name)
+        path = os.path.expanduser(click.prompt("Site path", default=default_path))
+
+        tld = defaults["tld"] or ".local"
+        domain = click.prompt("Domain", default=f"{slug}{tld}")
+
         username = click.prompt("WP admin username", default="admin")
         password = click.prompt("WP admin password", hide_input=True)
-        email = click.prompt("WP admin email")
+        email = click.prompt("WP admin email", default=defaults["admin_email"] or "")
         php_version = click.prompt("PHP version (leave blank for default)", default="")
 
         from cli_anything.local.utils.graphql_backend import add_site
