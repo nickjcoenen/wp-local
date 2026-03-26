@@ -1,4 +1,4 @@
-# cli-local Test Plan
+# wp-local Test Plan
 
 ## Test Inventory
 
@@ -88,10 +88,10 @@ started.
 - `test_wp_plugin_list` — `list_plugins` returns a list
 
 ### `TestCLISubprocess` (~4 tests)
-- `test_help` — `cli-local --help` exits 0, mentions "cli-local" or "usage"
-- `test_site_list_json` — `cli-local --json site list` produces valid JSON list
-- `test_site_info_json` — `cli-local --json site info iw1zR_3qf` includes `"id": "iw1zR_3qf"`
-- `test_version` — `cli-local --version` exits 0, mentions "1.0.0"
+- `test_help` — `wp-local --help` exits 0, mentions "wp-local" or "usage"
+- `test_site_list_json` — `wp-local --json site list` produces valid JSON list
+- `test_site_info_json` — `wp-local --json site info iw1zR_3qf` includes `"id": "iw1zR_3qf"`
+- `test_version` — `wp-local --version` exits 0, mentions "1.0.0"
 
 ---
 
@@ -111,7 +111,7 @@ Run on 2026-03-25, Python 3.14.3, pytest 9.0.2, macOS darwin-arm64.
 ```
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.3, pytest-9.0.2, pluggy-1.6.0
-rootdir: /Users/nickcoenen/Scripts/cli-local/agent-harness
+rootdir: /Users/nickcoenen/Scripts/wp-local/agent-harness
 collected 42 items
 
 test_core.py::TestLoadConnectionInfo::test_load_connection_info_missing_file PASSED

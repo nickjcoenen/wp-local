@@ -1,6 +1,6 @@
 """local_cli.py — Click CLI harness for Local by Flywheel.
 
-Entry point: cli-local (registered via setup.py console_scripts)
+Entry point: wp-local (registered via setup.py console_scripts)
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def resolve_site(id_or_name: str | None) -> str:
     s = get_session()
     if s.active_site_id:
         return s.active_site_id
-    raise click.UsageError("No site specified. Use --site or 'cli-local session use <id>'")
+    raise click.UsageError("No site specified. Use --site or 'wp-local session use <id>'")
 
 
 def _print_sites_table(sites: list[dict]) -> None:
@@ -105,7 +105,7 @@ def _print_rows_table(rows: list[dict]) -> None:
 @click.group(invoke_without_command=True)
 @click.option("--json", "json_mode", is_flag=True, help="Output JSON")
 @click.option("--site", "site_arg", default=None, help="Site ID or name")
-@click.version_option("1.0.0", prog_name="cli-local")
+@click.version_option("1.0.0", prog_name="wp-local")
 @click.pass_context
 def cli(ctx, json_mode, site_arg):
     """CLI harness for Local by Flywheel."""
@@ -297,7 +297,7 @@ def site_add():
 @click.argument("site", required=False)
 @click.argument("wp_args", nargs=-1, type=click.UNPROCESSED)
 def wp_cmd(site, wp_args):
-    """Run WP-CLI command on a site. Usage: cli-local wp SITE plugin list"""
+    """Run WP-CLI command on a site. Usage: wp-local wp SITE plugin list"""
     try:
         site_id = resolve_site(site)
         from cli_anything.local.utils.wpcli_backend import run_wp_cli

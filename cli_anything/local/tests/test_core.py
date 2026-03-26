@@ -1,4 +1,4 @@
-"""test_core.py — Unit tests for cli-local core modules.
+"""test_core.py — Unit tests for wp-local core modules.
 
 Uses unittest.mock throughout; no real Local installation is required.
 """

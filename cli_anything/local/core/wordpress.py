@@ -1,4 +1,4 @@
-"""WordPress operations via WP-CLI for cli-local.
+"""WordPress operations via WP-CLI for wp-local.
 
 All functions call wpcli_backend.run_wp_cli() which handles path/socket
 resolution and subprocess execution.

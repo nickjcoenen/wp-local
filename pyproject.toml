@@ -3,7 +3,7 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cli-local"
+name = "wp-local"
 version = "1.0.0"
 description = "CLI harness for Local by Flywheel — manage WordPress sites headlessly"
 readme = "cli_anything/local/README.md"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cli-local = "cli_anything.local.local_cli:cli"
+wp-local = "cli_anything.local.local_cli:cli"
 
 [tool.setuptools.packages.find]
 include = ["cli_anything.*"]

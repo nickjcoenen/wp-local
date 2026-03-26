@@ -1,4 +1,4 @@
-"""test_full_e2e.py — End-to-end tests for cli-local.
+"""test_full_e2e.py — End-to-end tests for wp-local.
 
 Requires Local by Flywheel to be running with site "offimac" (id=iw1zR_3qf)
 in a started state.  All tests here hit the real GraphQL API, real MySQL
@@ -205,7 +205,7 @@ def _resolve_cli(name: str) -> list[str]:
     if force:
         raise RuntimeError(f"{name} not found in PATH.")
     # Fallback to venv bin
-    venv_path = os.path.expanduser(f"~/Scripts/cli-local/.venv/bin/{name}")
+    venv_path = os.path.expanduser(f"~/Scripts/wp-local/.venv/bin/{name}")
     if os.path.exists(venv_path):
         return [venv_path]
     # Last resort: python -m
@@ -214,7 +214,7 @@ def _resolve_cli(name: str) -> list[str]:
 
 
 class TestCLISubprocess:
-    CLI_BASE = _resolve_cli("cli-local")
+    CLI_BASE = _resolve_cli("wp-local")
 
     def _run(self, args: list[str], check: bool = True) -> subprocess.CompletedProcess:
         return subprocess.run(
@@ -228,7 +228,7 @@ class TestCLISubprocess:
         result = self._run(["--help"])
         assert result.returncode == 0
         assert (
-            "cli-local" in result.stdout.lower() or "usage" in result.stdout.lower()
+            "wp-local" in result.stdout.lower() or "usage" in result.stdout.lower()
         )
 
     def test_site_list_json(self):

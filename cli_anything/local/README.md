@@ -1,6 +1,6 @@
-# cli-local
+# wp-local
 
-`cli-local` is a headless command-line harness for [Local by Flywheel](https://localwp.com/). It wraps Local's internal GraphQL API, WP-CLI, and MySQL to let you list, start, stop, and inspect WordPress sites; run arbitrary WP-CLI commands; execute SQL queries; export and import databases; and tail service logs — all from a terminal, with an optional interactive REPL and JSON output mode for scripting.
+`wp-local` is a headless command-line harness for [Local by Flywheel](https://localwp.com/). It wraps Local's internal GraphQL API, WP-CLI, and MySQL to let you list, start, stop, and inspect WordPress sites; run arbitrary WP-CLI commands; execute SQL queries; export and import databases; and tail service logs — all from a terminal, with an optional interactive REPL and JSON output mode for scripting.
 
 ---
 
@@ -18,21 +18,21 @@
 **With pipx (recommended — isolated, no venv management):**
 
 ```bash
-pipx install git+https://github.com/nickjcoenen/cli-local.git
+pipx install git+https://github.com/nickjcoenen/wp-local.git
 ```
 
 **With pip:**
 
 ```bash
-pip install git+https://github.com/nickjcoenen/cli-local.git
+pip install git+https://github.com/nickjcoenen/wp-local.git
 ```
 
 **Update to the latest version:**
 
 ```bash
-pipx upgrade cli-local
+pipx upgrade wp-local
 # or
-pip install --upgrade git+https://github.com/nickjcoenen/cli-local.git
+pip install --upgrade git+https://github.com/nickjcoenen/wp-local.git
 ```
 
 > **Note:** macOS only. Requires [Local by Flywheel](https://localwp.com/) to be installed.
@@ -43,42 +43,42 @@ pip install --upgrade git+https://github.com/nickjcoenen/cli-local.git
 
 ```bash
 # List all sites
-cli-local site list
+wp-local site list
 
 # Start / stop / restart a site (by ID or name)
-cli-local site start my-site
-cli-local site stop  my-site
-cli-local site restart my-site
+wp-local site start my-site
+wp-local site stop  my-site
+wp-local site restart my-site
 
 # Show full site details
-cli-local site info my-site
+wp-local site info my-site
 
 # Run a WP-CLI command
-cli-local wp my-site plugin list
-cli-local wp my-site option get siteurl
-cli-local wp my-site user list --format=table
+wp-local wp my-site plugin list
+wp-local wp my-site option get siteurl
+wp-local wp my-site user list --format=table
 
 # Run a SQL query
-cli-local db query my-site "SELECT ID, post_title FROM wp_posts LIMIT 5"
+wp-local db query my-site "SELECT ID, post_title FROM wp_posts LIMIT 5"
 
 # Export / import database
-cli-local db export my-site
-cli-local db export my-site /tmp/backup.sql
-cli-local db import my-site /tmp/backup.sql
+wp-local db export my-site
+wp-local db export my-site /tmp/backup.sql
+wp-local db import my-site /tmp/backup.sql
 
 # Tail nginx log (Ctrl-C to stop)
-cli-local log tail my-site
-cli-local log tail my-site php
+wp-local log tail my-site
+wp-local log tail my-site php
 
 # Show last 100 lines of a log
-cli-local log show my-site nginx -n 100
+wp-local log show my-site nginx -n 100
 
 # Set a default active site for the session
-cli-local session use my-site
+wp-local session use my-site
 
 # After setting an active site, the SITE argument is optional
-cli-local site status
-cli-local db query "SELECT option_value FROM wp_options WHERE option_name='siteurl'"
+wp-local site status
+wp-local db query "SELECT option_value FROM wp_options WHERE option_name='siteurl'"
 ```
 
 ---
@@ -103,7 +103,7 @@ cli-local db query "SELECT option_value FROM wp_options WHERE option_name='siteu
 Passthrough to WP-CLI. The site's PHP binary and WordPress root are resolved automatically.
 
 ```
-cli-local wp SITE <wp-cli args...>
+wp-local wp SITE <wp-cli args...>
 ```
 
 ### `db`
@@ -131,7 +131,7 @@ cli-local wp SITE <wp-cli args...>
 
 | Command | Description |
 |---|---|
-| `session use <SITE>` | Set the default active site. Persisted to `~/.cli-local/session.json`. |
+| `session use <SITE>` | Set the default active site. Persisted to `~/.wp-local/session.json`. |
 | `session status` | Show current session state. |
 | `session clear` | Clear the session. |
 
@@ -142,10 +142,10 @@ cli-local wp SITE <wp-cli args...>
 Add `--json` before any subcommand to receive machine-readable JSON output:
 
 ```bash
-cli-local --json site list
-cli-local --json site info my-site
-cli-local --json db query my-site "SELECT * FROM wp_options LIMIT 3"
-cli-local --json jobs list
+wp-local --json site list
+wp-local --json site info my-site
+wp-local --json db query my-site "SELECT * FROM wp_options LIMIT 3"
+wp-local --json jobs list
 ```
 
 ---
@@ -155,24 +155,24 @@ cli-local --json jobs list
 Set a default site once so you don't have to repeat the site argument:
 
 ```bash
-cli-local session use abc123xyz   # accepts site ID or name
-cli-local site status             # uses active site automatically
-cli-local wp plugin list          # same
+wp-local session use abc123xyz   # accepts site ID or name
+wp-local site status             # uses active site automatically
+wp-local wp plugin list          # same
 ```
 
-Session state is stored in `~/.cli-local/session.json`.
+Session state is stored in `~/.wp-local/session.json`.
 
 ---
 
 ## Interactive REPL
 
-Running `cli-local` with no subcommand launches an interactive REPL:
+Running `wp-local` with no subcommand launches an interactive REPL:
 
 ```bash
-cli-local
+wp-local
 ```
 
-Inside the REPL, type `help` for a command summary, or any `cli-local` command without the `cli-local` prefix. Type `exit` or `quit` to leave.
+Inside the REPL, type `help` for a command summary, or any `wp-local` command without the `wp-local` prefix. Type `exit` or `quit` to leave.
 
 ---
 
@@ -183,7 +183,7 @@ cli_anything/local/
 ├── local_cli.py          ← Click CLI (this package's entry point)
 ├── core/
 │   ├── site.py           ← File-based site data (works offline)
-│   ├── session.py        ← Session persistence (~/.cli-local/session.json)
+│   ├── session.py        ← Session persistence (~/.wp-local/session.json)
 │   └── wordpress.py      ← WP-CLI convenience wrappers
 └── utils/
     ├── graphql_backend.py ← Local's internal GraphQL API

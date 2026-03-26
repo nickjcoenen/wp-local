@@ -1,13 +1,13 @@
-"""Session state management for cli-local.
+"""Session state management for wp-local.
 
-Persists the active site and other metadata to ~/.cli-local/session.json
+Persists the active site and other metadata to ~/.wp-local/session.json
 so the selection survives between CLI invocations.
 """
 
 import json
 import os
 
-SESSION_DIR = os.path.expanduser("~/.cli-local")
+SESSION_DIR = os.path.expanduser("~/.wp-local")
 SESSION_FILE = os.path.join(SESSION_DIR, "session.json")
 
 
