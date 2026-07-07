@@ -33,11 +33,11 @@ subprocesses. No real Local installation is required.
 |------|-------------|
 | `test_find_php_binary_found` | Mock `glob.glob` returning a valid path; assert path is returned |
 | `test_find_php_binary_not_found` | Mock `glob.glob` returning `[]`; assert `RuntimeError` is raised |
-| `test_run_wp_cli_constructs_command` | Mock `_load_sites_json`, `_find_php_binary`, `subprocess.run`; assert command list structure |
+| `test_run_wp_cli_constructs_command` | Mock `_get_site_data`, `_find_php_binary`, socket check, `subprocess.run`; assert command list structure |
 | `test_run_wp_cli_sets_mysql_home` | Same mocks; assert `MYSQL_HOME` env var contains site ID in path |
 | `test_get_wp_root` | Pass site dict with known path; assert `app/public` suffix |
-| `test_load_sites_json_missing` | Mock `os.path.exists` False; assert `RuntimeError` |
-| `test_get_site_data_not_found` | Mock `_load_sites_json` returning `{}`; assert `RuntimeError` for unknown ID |
+| `test_get_site_data_missing_sites_json` | Mock `os.path.exists` False; assert `RuntimeError` |
+| `test_get_site_data_not_found` | Mock `_read_json` returning `{}`; assert `RuntimeError` for unknown ID |
 
 ### `site.py` (~9 tests)
 
@@ -84,7 +84,7 @@ started.
 - `test_export_db` — `mysqldump` writes a non-trivial `.sql` file to `tmp_path`
 
 ### `TestWPCLIReal` (~2 tests)
-- `test_wp_version` — `wp_version` returns a semver string
+- `test_wp_version` — `run_wp_cli(..., ["core", "version"])` returns a semver string
 - `test_wp_plugin_list` — `list_plugins` returns a list
 
 ### `TestCLISubprocess` (~4 tests)
@@ -124,8 +124,8 @@ test_core.py::TestListAndGetSite::test_get_site_found                          P
 test_core.py::TestListAndGetSite::test_get_site_not_found                      PASSED
 test_core.py::TestFindPhpBinary::test_find_php_binary_found                    PASSED
 test_core.py::TestFindPhpBinary::test_find_php_binary_not_found                PASSED
-test_core.py::TestLoadSitesJson::test_load_sites_json_missing                  PASSED
-test_core.py::TestLoadSitesJson::test_get_site_data_not_found                  PASSED
+test_core.py::TestGetSiteData::test_get_site_data_missing_sites_json           PASSED
+test_core.py::TestGetSiteData::test_get_site_data_not_found                    PASSED
 test_core.py::TestGetWpRoot::test_get_wp_root                                  PASSED
 test_core.py::TestRunWpCli::test_run_wp_cli_constructs_command                 PASSED
 test_core.py::TestRunWpCli::test_run_wp_cli_sets_mysql_home                    PASSED
@@ -173,4 +173,3 @@ test_full_e2e.py::TestCLISubprocess::test_version                              P
 - `run_query` with `--batch --silent` treats the first output line as the
   column-header row; single-result queries return `[]`.  `test_run_query_select_version`
   uses `SHOW DATABASES` (multiple rows) instead of `SELECT VERSION()`.
-

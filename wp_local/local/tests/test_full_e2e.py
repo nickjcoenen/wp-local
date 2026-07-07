@@ -55,7 +55,7 @@ def _inject_mysql_path() -> None:
 
 class TestGraphQLReal:
     def test_list_sites(self):
-        from cli_anything.local.utils.graphql_backend import list_sites
+        from wp_local.local.utils.graphql_backend import list_sites
 
         sites = list_sites()
         assert isinstance(sites, list)
@@ -64,7 +64,7 @@ class TestGraphQLReal:
         assert "iw1zR_3qf" in ids
 
     def test_get_site(self):
-        from cli_anything.local.utils.graphql_backend import get_site
+        from wp_local.local.utils.graphql_backend import get_site
 
         site = get_site("iw1zR_3qf")
         assert site is not None
@@ -72,14 +72,14 @@ class TestGraphQLReal:
         assert site["status"] in ("running", "halted", "starting", "stopping")
 
     def test_list_jobs(self):
-        from cli_anything.local.utils.graphql_backend import list_jobs
+        from wp_local.local.utils.graphql_backend import list_jobs
 
         jobs = list_jobs()
         assert isinstance(jobs, list)
 
     def test_site_start_when_running(self):
         """Should succeed even if already running."""
-        from cli_anything.local.utils.graphql_backend import start_site
+        from wp_local.local.utils.graphql_backend import start_site
 
         result = start_site("iw1zR_3qf")
         assert result.get("id") == "iw1zR_3qf"
@@ -112,7 +112,7 @@ class TestMySQLReal:
         as header, no data lines remain).  We use SHOW DATABASES, which always
         returns multiple rows, as a reliable connectivity check.
         """
-        from cli_anything.local.utils.mysql_backend import run_query
+        from wp_local.local.utils.mysql_backend import run_query
 
         rows = run_query("iw1zR_3qf", "SHOW DATABASES")
         assert isinstance(rows, list)
@@ -121,7 +121,7 @@ class TestMySQLReal:
         assert "local" in db_names, f"Expected 'local' database, got: {db_names}"
 
     def test_run_query_show_tables(self):
-        from cli_anything.local.utils.mysql_backend import run_query
+        from wp_local.local.utils.mysql_backend import run_query
 
         rows = run_query("iw1zR_3qf", "SHOW TABLES")
         assert isinstance(rows, list)
@@ -130,7 +130,7 @@ class TestMySQLReal:
         assert any("options" in t for t in table_values)
 
     def test_export_db(self, tmp_path):
-        from cli_anything.local.utils.mysql_backend import export_db
+        from wp_local.local.utils.mysql_backend import export_db
 
         out = str(tmp_path / "dump.sql")
         result = export_db("iw1zR_3qf", out)
@@ -153,13 +153,13 @@ _OFFIMAC_WP_ROOT = "/Users/nickcoenen/Dev/Sites/offimac/app/public/core"
 
 class TestWPCLIReal:
     def test_wp_version(self):
-        from cli_anything.local.core.wordpress import wp_version
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         with __import__("unittest.mock", fromlist=["patch"]).patch.object(
             wpcli_backend, "_get_wp_root", return_value=_OFFIMAC_WP_ROOT
         ):
-            version = wp_version("iw1zR_3qf")
+            result = wpcli_backend.run_wp_cli("iw1zR_3qf", ["core", "version"])
+        version = result.stdout.strip()
         assert isinstance(version, str)
         assert len(version) > 0
         print(f"\n  WP version: {version}")
@@ -170,7 +170,7 @@ class TestWPCLIReal:
         PHP 8.5 emits Deprecated notices to stdout before the JSON output when
         run through WP-CLI, so we strip leading non-JSON lines before parsing.
         """
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         with __import__("unittest.mock", fromlist=["patch"]).patch.object(
             wpcli_backend, "_get_wp_root", return_value=_OFFIMAC_WP_ROOT
@@ -197,7 +197,7 @@ def _resolve_cli(name: str) -> list[str]:
     """Resolve installed CLI command; falls back to python -m for dev."""
     import shutil
 
-    force = os.environ.get("CLI_ANYTHING_FORCE_INSTALLED", "").strip() == "1"
+    force = os.environ.get("WP_LOCAL_FORCE_INSTALLED", "").strip() == "1"
     path = shutil.which(name)
     if path:
         print(f"[_resolve_cli] Using installed command: {path}")
@@ -209,7 +209,7 @@ def _resolve_cli(name: str) -> list[str]:
     if os.path.exists(venv_path):
         return [venv_path]
     # Last resort: python -m
-    module = "cli_anything.local.local_cli"
+    module = "wp_local.local.local_cli"
     return [sys.executable, "-m", module]
 
 

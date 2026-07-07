@@ -159,10 +159,12 @@ wp-local wp SITE <wp-cli args...>
 
 ## JSON Output Mode
 
-Add `--json` before any subcommand to receive machine-readable JSON output:
+Add `--json` before the subcommand, or on commands that output data, to receive
+machine-readable JSON output:
 
 ```bash
 wp-local --json site list
+wp-local site list --json
 wp-local --json site info my-site
 wp-local --json db query my-site "SELECT * FROM wp_options LIMIT 3"
 wp-local --json jobs list
@@ -184,30 +186,16 @@ Session state is stored in `~/.wp-local/session.json`.
 
 ---
 
-## Interactive REPL
-
-Running `wp-local` with no subcommand launches an interactive REPL:
-
-```bash
-wp-local
-```
-
-Inside the REPL, type `help` for a command summary, or any `wp-local` command without the `wp-local` prefix. Type `exit` or `quit` to leave.
-
----
-
 ## Architecture
 
 ```
-cli_anything/local/
+wp_local/local/
 ├── local_cli.py          ← Click CLI (this package's entry point)
 ├── core/
 │   ├── site.py           ← File-based site data (works offline)
-│   ├── session.py        ← Session persistence (~/.wp-local/session.json)
-│   └── wordpress.py      ← WP-CLI convenience wrappers
+│   └── session.py        ← Session persistence (~/.wp-local/session.json)
 └── utils/
     ├── graphql_backend.py ← Local's internal GraphQL API
     ├── wpcli_backend.py   ← WP-CLI subprocess runner
-    ├── mysql_backend.py   ← MySQL query / export / import
-    └── repl_skin.py       ← Shared REPL UI (banner, prompt, table output)
+    └── mysql_backend.py   ← MySQL query / export / import
 ```
