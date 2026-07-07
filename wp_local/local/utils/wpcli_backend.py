@@ -7,9 +7,15 @@ root.
 """
 
 import glob
-import json
 import os
 import subprocess
+
+from wp_local.local.core.site import (
+    _get_site_data,
+    get_mysql_socket,
+    get_run_dir,
+    version_key_from_path,
+)
 
 WPCLI_PHAR = (
     "/Applications/Local.app/Contents/Resources/extraResources/bin/wp-cli/wp-cli.phar"
@@ -18,54 +24,6 @@ WPCLI_PHAR = (
 LOCAL_LIGHTNING_SERVICES_DIR = os.path.expanduser(
     "~/Library/Application Support/Local/lightning-services"
 )
-
-LOCAL_RUN_DIR = os.path.expanduser(
-    "~/Library/Application Support/Local/run"
-)
-
-SITES_JSON = os.path.expanduser(
-    "~/Library/Application Support/Local/sites.json"
-)
-
-
-def _load_sites_json() -> dict:
-    """Read Local's sites.json and return its contents as a dict.
-
-    Returns:
-        Dict mapping site IDs to site configuration dicts.
-
-    Raises:
-        RuntimeError: if sites.json does not exist.
-    """
-    if not os.path.exists(SITES_JSON):
-        raise RuntimeError(
-            f"sites.json not found at:\n  {SITES_JSON}\n"
-            "Make sure Local by Flywheel is installed."
-        )
-    with open(SITES_JSON, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _get_site_data(site_id: str) -> dict:
-    """Return the configuration dict for a specific site.
-
-    Args:
-        site_id: Local site ID string.
-
-    Returns:
-        Site configuration dict from sites.json.
-
-    Raises:
-        RuntimeError: if the site ID is not found in sites.json.
-    """
-    sites = _load_sites_json()
-    if site_id not in sites:
-        available = ", ".join(sites.keys()) if sites else "(none)"
-        raise RuntimeError(
-            f"Site '{site_id}' not found in sites.json.\n"
-            f"Available site IDs: {available}"
-        )
-    return sites[site_id]
 
 
 def _find_php_binary(php_version: str) -> str:
@@ -99,7 +57,7 @@ def _find_php_binary(php_version: str) -> str:
             "Make sure the PHP version is installed in Local."
         )
     # Prefer the highest-versioned build if multiple matches exist.
-    matches.sort()
+    matches.sort(key=lambda path: version_key_from_path(path, "php"))
     return matches[-1]
 
 
@@ -168,15 +126,29 @@ def run_wp_cli(
     php_bin = _find_php_binary(php_version)
     wp_root = _get_wp_root(site_data)
 
+    # Per-site MySQL socket: wp-config uses DB_HOST=localhost, so mysqli/PDO
+    # resolve the socket from php.ini defaults — point them at the right one.
+    socket = get_mysql_socket(site_id)
+    if not os.path.exists(socket):
+        raise RuntimeError(
+            f"MySQL socket not found:\n  {socket}\n"
+            f"Start the site '{site_data.get('name', site_id)}' in Local first."
+        )
+
     cmd = [
         php_bin,
+        # E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED = 8191: hide deprecation
+        # noise (old phar on new PHP) without hiding real errors/warnings.
+        "-d", "error_reporting=8191",
+        "-d", f"mysqli.default_socket={socket}",
+        "-d", f"pdo_mysql.default_socket={socket}",
         WPCLI_PHAR,
         f"--path={wp_root}",
         "--allow-root",
     ] + wp_args
 
     env = os.environ.copy()
-    env["MYSQL_HOME"] = os.path.join(LOCAL_RUN_DIR, site_id, "conf", "mysql")
+    env["MYSQL_HOME"] = os.path.join(get_run_dir(site_id), "conf", "mysql")
     env["WP_CLI_CACHE_DIR"] = "/tmp/wp-cli-cache"
 
     return subprocess.run(

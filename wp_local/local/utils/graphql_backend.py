@@ -147,7 +147,12 @@ def start_site(site_id: str) -> dict:
     Returns:
         Dict with 'id' and 'status' fields from the mutation result.
     """
-    data = gql('mutation { startSite(id: "%s") { id status } }' % site_id)
+    query = """
+    mutation StartSite($id: ID!) {
+        startSite(id: $id) { id status }
+    }
+    """
+    data = gql(query, variables={"id": site_id})
     return data.get("startSite", data)
 
 
@@ -160,7 +165,12 @@ def stop_site(site_id: str) -> dict:
     Returns:
         Dict with 'id' and 'status' fields from the mutation result.
     """
-    data = gql('mutation { stopSite(id: "%s") { id status } }' % site_id)
+    query = """
+    mutation StopSite($id: ID!) {
+        stopSite(id: $id) { id status }
+    }
+    """
+    data = gql(query, variables={"id": site_id})
     return data.get("stopSite", data)
 
 
@@ -173,7 +183,12 @@ def restart_site(site_id: str) -> dict:
     Returns:
         Dict with 'id' and 'status' fields from the mutation result.
     """
-    data = gql('mutation { restartSite(id: "%s") { id status } }' % site_id)
+    query = """
+    mutation RestartSite($id: ID!) {
+        restartSite(id: $id) { id status }
+    }
+    """
+    data = gql(query, variables={"id": site_id})
     return data.get("restartSite", data)
 
 
@@ -187,7 +202,12 @@ def rename_site(site_id: str, name: str) -> dict:
     Returns:
         Dict with the updated site fields.
     """
-    data = gql('mutation { renameSite(id: "%s", name: "%s") { id name } }' % (site_id, name))
+    query = """
+    mutation RenameSite($id: ID!, $name: String!) {
+        renameSite(id: $id, name: $name) { id name }
+    }
+    """
+    data = gql(query, variables={"id": site_id, "name": name})
     return data.get("renameSite", data)
 
 

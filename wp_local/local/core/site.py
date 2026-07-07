@@ -6,6 +6,7 @@ when the Local app is not running.
 
 import json
 import os
+import re
 
 APPDATA = os.path.expanduser("~/Library/Application Support/Local")
 SITES_JSON = os.path.join(APPDATA, "sites.json")
@@ -52,13 +53,6 @@ def list_sites_from_file() -> list[dict]:
 
     sites: list[dict] = []
     for site_id, site_data in raw_sites.items():
-        status_entry = raw_statuses.get(site_id, {})
-        # Local stores status either as a plain string or nested object.
-        if isinstance(status_entry, dict):
-            status = status_entry.get("status", "stopped")
-        else:
-            status = str(status_entry) if status_entry else "stopped"
-
         # Normalise domain: Local may store it under .domain or .domains[0]
         domain = site_data.get("domain", "")
         if not domain:
@@ -72,7 +66,7 @@ def list_sites_from_file() -> list[dict]:
                 "domain": domain,
                 "path": site_data.get("path", ""),
                 "localVersion": site_data.get("localVersion", ""),
-                "status": status,
+                "status": parse_site_status(raw_statuses.get(site_id)),
                 "services": site_data.get("services", {}),
                 "multiSite": site_data.get("multiSite", False),
                 "xdebugEnabled": site_data.get("xdebugEnabled", False),
@@ -80,6 +74,38 @@ def list_sites_from_file() -> list[dict]:
         )
 
     return sorted(sites, key=lambda s: s["name"].lower())
+
+
+def parse_site_status(status_entry) -> str:
+    """Return Local's normalized status string for a status entry."""
+    if isinstance(status_entry, dict):
+        return status_entry.get("status", "stopped")
+    return str(status_entry) if status_entry else "stopped"
+
+
+def _get_site_data(site_id: str) -> dict:
+    """Return the raw configuration dict for a site from sites.json."""
+    if not os.path.exists(SITES_JSON):
+        raise RuntimeError(
+            f"sites.json not found at:\n  {SITES_JSON}\n"
+            "Make sure Local by Flywheel is installed."
+        )
+    sites = _read_json(SITES_JSON)
+    if site_id not in sites:
+        available = ", ".join(sites.keys()) if sites else "(none)"
+        raise RuntimeError(
+            f"Site '{site_id}' not found in sites.json.\n"
+            f"Available site IDs: {available}"
+        )
+    return sites[site_id]
+
+
+def version_key_from_path(path: str, prefix: str) -> tuple[int, ...]:
+    """Extract a numeric service version tuple from a Local service path."""
+    match = re.search(rf"{re.escape(prefix)}-([0-9]+(?:\.[0-9]+)*)", path)
+    if not match:
+        return ()
+    return tuple(int(part) for part in match.group(1).split("."))
 
 
 def get_site_from_file(id_or_name: str) -> dict | None:
@@ -111,6 +137,23 @@ def resolve_site_id(id_or_name: str) -> str:
     return site["id"]
 
 
+def resolve_site_from_cwd(cwd: str | None = None) -> str | None:
+    """Return the site ID whose path contains cwd, or None.
+
+    Walks nothing: simply checks whether cwd is inside any site's path
+    from sites.json (e.g. ~/Dev/Sites/<name>/app/public/wp-content).
+    """
+    cwd = os.path.realpath(cwd or os.getcwd())
+    for site in list_sites_from_file():
+        base = site.get("path") or ""
+        if not base:
+            continue
+        base = os.path.realpath(os.path.expanduser(base))
+        if cwd == base or cwd.startswith(base + os.sep):
+            return site["id"]
+    return None
+
+
 def get_run_dir(site_id: str) -> str:
     """Return the runtime directory for a site: {RUN_DIR}/{site_id}."""
     return os.path.join(RUN_DIR, site_id)
@@ -118,7 +161,7 @@ def get_run_dir(site_id: str) -> str:
 
 def get_mysql_socket(site_id: str) -> str:
     """Return the MySQL socket path for a site."""
-    return os.path.join(RUN_DIR, site_id, "mysql", "mysqld.sock")
+    return os.path.join(get_run_dir(site_id), "mysql", "mysqld.sock")
 
 
 def get_php_fpm_socket(site_id: str) -> str:
@@ -152,9 +195,4 @@ def get_log_path(site_id: str, service: str, log_name: str = None) -> str:
 def is_running(site_id: str) -> bool:
     """Return True if the site's status is "running" according to site-statuses.json."""
     raw_statuses: dict = _read_json(SITE_STATUSES_JSON)
-    status_entry = raw_statuses.get(site_id, {})
-    if isinstance(status_entry, dict):
-        status = status_entry.get("status", "stopped")
-    else:
-        status = str(status_entry) if status_entry else "stopped"
-    return status == "running"
+    return parse_site_status(raw_statuses.get(site_id)) == "running"

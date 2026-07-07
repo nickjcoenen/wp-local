@@ -5,45 +5,42 @@ All operations connect through the per-site mysqld.sock file, so the target
 site must be running before any function here is called.
 """
 
-import json
+import glob
 import os
+import shutil
 import subprocess
+import tempfile
 
-LOCAL_RUN_DIR = os.path.expanduser(
-    "~/Library/Application Support/Local/run"
+from wp_local.local.core.site import (
+    _get_site_data,
+    get_mysql_socket,
+    version_key_from_path,
 )
 
-SITES_JSON = os.path.expanduser(
-    "~/Library/Application Support/Local/sites.json"
-)
+LOCAL_LIGHTNING_SERVICES_DIRS = [
+    os.path.expanduser("~/Library/Application Support/Local/lightning-services"),
+    "/Applications/Local.app/Contents/Resources/extraResources/lightning-services",
+]
 
 
-def _get_site_data(site_id: str) -> dict:
-    """Return the configuration dict for a specific site from sites.json.
+def _find_mysql_binary(tool: str = "mysql") -> str:
+    """Locate Local's bundled mysql/mysqldump; fall back to PATH.
 
-    Args:
-        site_id: Local site ID string.
-
-    Returns:
-        Site configuration dict.
-
-    Raises:
-        RuntimeError: if sites.json is missing or the site ID is not found.
+    Picks the newest mysql-* lightning service on disk.
     """
-    if not os.path.exists(SITES_JSON):
-        raise RuntimeError(
-            f"sites.json not found at:\n  {SITES_JSON}\n"
-            "Make sure Local by Flywheel is installed."
+    for base in LOCAL_LIGHTNING_SERVICES_DIRS:
+        matches = glob.glob(
+            os.path.join(base, "mysql-*", "bin", "darwin-arm64", "bin", tool)
         )
-    with open(SITES_JSON, "r", encoding="utf-8") as f:
-        sites = json.load(f)
-    if site_id not in sites:
-        available = ", ".join(sites.keys()) if sites else "(none)"
-        raise RuntimeError(
-            f"Site '{site_id}' not found in sites.json.\n"
-            f"Available site IDs: {available}"
-        )
-    return sites[site_id]
+        if matches:
+            matches.sort(key=lambda path: version_key_from_path(path, "mysql"))
+            return matches[-1]
+    on_path = shutil.which(tool)
+    if on_path:
+        return on_path
+    raise RuntimeError(
+        f"'{tool}' not found in Local's lightning-services or on PATH."
+    )
 
 
 def _get_socket(site_id: str) -> str:
@@ -58,7 +55,8 @@ def _get_socket(site_id: str) -> str:
     Raises:
         RuntimeError: if the socket file does not exist (site not running).
     """
-    socket_path = os.path.join(LOCAL_RUN_DIR, site_id, "mysql", "mysqld.sock")
+    _get_site_data(site_id)
+    socket_path = get_mysql_socket(site_id)
     if not os.path.exists(socket_path):
         raise RuntimeError(
             f"MySQL socket not found at:\n  {socket_path}\n"
@@ -89,7 +87,7 @@ def run_query(site_id: str, sql: str) -> list[dict]:
     socket = _get_socket(site_id)
 
     cmd = [
-        "mysql",
+        _find_mysql_binary("mysql"),
         f"--socket={socket}",
         "-u", "root",
         "-proot",
@@ -142,20 +140,42 @@ def export_db(site_id: str, output_path: str) -> str:
     socket = _get_socket(site_id)
 
     cmd = [
-        "mysqldump",
+        _find_mysql_binary("mysqldump"),
         f"--socket={socket}",
         "-u", "root",
         "-proot",
         "local",
     ]
 
-    with open(output_path, "w", encoding="utf-8") as out_file:
-        result = subprocess.run(cmd, stdout=out_file, stderr=subprocess.PIPE, text=True)
+    output_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+    os.makedirs(output_dir, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=output_dir,
+            prefix=f".{os.path.basename(output_path)}.",
+            suffix=".tmp",
+            delete=False,
+        ) as out_file:
+            temp_path = out_file.name
+            result = subprocess.run(
+                cmd,
+                stdout=out_file,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
 
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"mysqldump exited with code {result.returncode}:\n{result.stderr.strip()}"
-        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"mysqldump exited with code {result.returncode}:\n{result.stderr.strip()}"
+            )
+        os.replace(temp_path, output_path)
+    except Exception:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+        raise
 
     return output_path
 
@@ -182,7 +202,7 @@ def import_db(site_id: str, input_path: str) -> None:
         )
 
     cmd = [
-        "mysql",
+        _find_mysql_binary("mysql"),
         f"--socket={socket}",
         "-u", "root",
         "-proot",

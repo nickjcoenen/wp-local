@@ -41,14 +41,14 @@ FAKE_STATUSES = {"abc123": "running"}
 
 class TestLoadConnectionInfo:
     def test_load_connection_info_missing_file(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         with patch("os.path.exists", return_value=False):
             with pytest.raises(RuntimeError, match="GraphQL connection info not found"):
                 graphql_backend._load_connection_info()
 
     def test_load_connection_info_valid(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         fake_info = {"url": "http://localhost:4000", "authToken": "tok123"}
         m = mock_open(read_data=json.dumps(fake_info))
@@ -63,7 +63,7 @@ class TestGql:
         return {"url": "http://localhost:4000/graphql", "authToken": "mytoken"}
 
     def test_gql_uses_auth_token(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         mock_resp = MagicMock()
         mock_resp.ok = True
@@ -82,7 +82,7 @@ class TestGql:
         assert sent_headers.get("Authorization") == "Bearer mytoken"
 
     def test_gql_raises_on_http_error(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         mock_resp = MagicMock()
         mock_resp.ok = False
@@ -96,7 +96,7 @@ class TestGql:
                 graphql_backend.gql("{ sites { id } }")
 
     def test_gql_raises_on_graphql_errors(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         mock_resp = MagicMock()
         mock_resp.ok = True
@@ -114,7 +114,7 @@ class TestGql:
 
 class TestListAndGetSite:
     def test_list_sites_returns_list(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         fake_sites = [{"id": "abc", "name": "Alpha"}, {"id": "def", "name": "Beta"}]
         with patch.object(graphql_backend, "gql", return_value={"sites": fake_sites}):
@@ -124,7 +124,7 @@ class TestListAndGetSite:
         assert result[0]["id"] == "abc"
 
     def test_get_site_found(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         fake_sites = [{"id": "abc123", "name": "TestSite"}, {"id": "xyz", "name": "Other"}]
         with patch.object(graphql_backend, "list_sites", return_value=fake_sites):
@@ -133,7 +133,7 @@ class TestListAndGetSite:
         assert site["name"] == "TestSite"
 
     def test_get_site_not_found(self):
-        from cli_anything.local.utils import graphql_backend
+        from wp_local.local.utils import graphql_backend
 
         fake_sites = [{"id": "abc123", "name": "TestSite"}]
         with patch.object(graphql_backend, "list_sites", return_value=fake_sites):
@@ -148,7 +148,7 @@ class TestListAndGetSite:
 
 class TestFindPhpBinary:
     def test_find_php_binary_found(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         fake_path = "/fake/path/php-8.1.0+1/bin/darwin-arm64/bin/php"
         with patch("glob.glob", return_value=[fake_path]):
@@ -156,32 +156,34 @@ class TestFindPhpBinary:
         assert result == fake_path
 
     def test_find_php_binary_not_found(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         with patch("glob.glob", return_value=[]):
             with pytest.raises(RuntimeError, match="PHP binary for version"):
                 wpcli_backend._find_php_binary("9.9.9")
 
 
-class TestLoadSitesJson:
-    def test_load_sites_json_missing(self):
-        from cli_anything.local.utils import wpcli_backend
+class TestGetSiteData:
+    def test_get_site_data_missing_sites_json(self):
+        from wp_local.local.core import site as site_mod
 
         with patch("os.path.exists", return_value=False):
             with pytest.raises(RuntimeError, match="sites.json not found"):
-                wpcli_backend._load_sites_json()
+                site_mod._get_site_data("abc123")
 
     def test_get_site_data_not_found(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.core import site as site_mod
 
-        with patch.object(wpcli_backend, "_load_sites_json", return_value={}):
+        with patch("os.path.exists", return_value=True), patch.object(
+            site_mod, "_read_json", return_value={}
+        ):
             with pytest.raises(RuntimeError, match="not found in sites.json"):
-                wpcli_backend._get_site_data("nosuchsite")
+                site_mod._get_site_data("nosuchsite")
 
 
 class TestGetWpRoot:
     def test_get_wp_root(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         site_data = {"path": "/Users/nick/Local Sites/mysite"}
         result = wpcli_backend._get_wp_root(site_data)
@@ -196,7 +198,7 @@ class TestRunWpCli:
         }
 
     def test_run_wp_cli_constructs_command(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         fake_proc = MagicMock()
         fake_proc.returncode = 0
@@ -205,6 +207,8 @@ class TestRunWpCli:
             wpcli_backend, "_get_site_data", return_value=self._fake_site_data()
         ), patch.object(
             wpcli_backend, "_find_php_binary", return_value="/fake/php"
+        ), patch(
+            "os.path.exists", return_value=True
         ), patch(
             "subprocess.run", return_value=fake_proc
         ) as mock_run:
@@ -219,7 +223,7 @@ class TestRunWpCli:
         assert "version" in cmd
 
     def test_run_wp_cli_sets_mysql_home(self):
-        from cli_anything.local.utils import wpcli_backend
+        from wp_local.local.utils import wpcli_backend
 
         fake_proc = MagicMock()
         fake_proc.returncode = 0
@@ -228,6 +232,8 @@ class TestRunWpCli:
             wpcli_backend, "_get_site_data", return_value=self._fake_site_data()
         ), patch.object(
             wpcli_backend, "_find_php_binary", return_value="/fake/php"
+        ), patch(
+            "os.path.exists", return_value=True
         ), patch(
             "subprocess.run", return_value=fake_proc
         ) as mock_run:
@@ -244,14 +250,14 @@ class TestRunWpCli:
 
 
 class TestSiteFile:
-    """Tests for cli_anything.local.core.site using mocked file I/O."""
+    """Tests for wp_local.local.core.site using mocked file I/O."""
 
     def _patch_json_files(self, sites=None, statuses=None):
         """Return a context manager that patches _read_json for both files."""
         sites_data = sites if sites is not None else FAKE_SITES_JSON
         statuses_data = statuses if statuses is not None else FAKE_STATUSES
 
-        from cli_anything.local.core import site as site_mod
+        from wp_local.local.core import site as site_mod
 
         def fake_read_json(path):
             if "sites.json" in path and "statuses" not in path:
@@ -263,7 +269,7 @@ class TestSiteFile:
         return patch.object(site_mod, "_read_json", side_effect=fake_read_json)
 
     def test_list_sites_from_file(self):
-        from cli_anything.local.core.site import list_sites_from_file
+        from wp_local.local.core.site import list_sites_from_file
 
         with self._patch_json_files():
             result = list_sites_from_file()
@@ -276,7 +282,7 @@ class TestSiteFile:
         assert s["status"] == "running"
 
     def test_get_site_by_id(self):
-        from cli_anything.local.core.site import get_site_from_file
+        from wp_local.local.core.site import get_site_from_file
 
         with self._patch_json_files():
             site = get_site_from_file("abc123")
@@ -285,7 +291,7 @@ class TestSiteFile:
         assert site["id"] == "abc123"
 
     def test_get_site_by_name_case_insensitive(self):
-        from cli_anything.local.core.site import get_site_from_file
+        from wp_local.local.core.site import get_site_from_file
 
         with self._patch_json_files():
             site = get_site_from_file("testsite")
@@ -294,7 +300,7 @@ class TestSiteFile:
         assert site["name"] == "TestSite"
 
     def test_get_site_not_found_returns_none(self):
-        from cli_anything.local.core.site import get_site_from_file
+        from wp_local.local.core.site import get_site_from_file
 
         with self._patch_json_files():
             site = get_site_from_file("does-not-exist")
@@ -302,7 +308,7 @@ class TestSiteFile:
         assert site is None
 
     def test_resolve_site_id_found(self):
-        from cli_anything.local.core.site import resolve_site_id
+        from wp_local.local.core.site import resolve_site_id
 
         with self._patch_json_files():
             site_id = resolve_site_id("abc123")
@@ -310,35 +316,35 @@ class TestSiteFile:
         assert site_id == "abc123"
 
     def test_resolve_site_id_not_found(self):
-        from cli_anything.local.core.site import resolve_site_id
+        from wp_local.local.core.site import resolve_site_id
 
         with self._patch_json_files():
             with pytest.raises(RuntimeError, match="Site not found"):
                 resolve_site_id("ghost-site")
 
     def test_get_run_dir(self):
-        from cli_anything.local.core.site import get_run_dir, RUN_DIR
+        from wp_local.local.core.site import get_run_dir, RUN_DIR
 
         result = get_run_dir("abc123")
         assert result == os.path.join(RUN_DIR, "abc123")
 
     def test_get_mysql_socket(self):
-        from cli_anything.local.core.site import get_mysql_socket, RUN_DIR
+        from wp_local.local.core.site import get_mysql_socket, RUN_DIR
 
         result = get_mysql_socket("abc123")
         expected = os.path.join(RUN_DIR, "abc123", "mysql", "mysqld.sock")
         assert result == expected
 
     def test_is_running_true(self):
-        from cli_anything.local.core import site as site_mod
-        from cli_anything.local.core.site import is_running
+        from wp_local.local.core import site as site_mod
+        from wp_local.local.core.site import is_running
 
         with patch.object(site_mod, "_read_json", return_value={"abc123": "running"}):
             assert is_running("abc123") is True
 
     def test_is_running_false(self):
-        from cli_anything.local.core import site as site_mod
-        from cli_anything.local.core.site import is_running
+        from wp_local.local.core import site as site_mod
+        from wp_local.local.core.site import is_running
 
         with patch.object(site_mod, "_read_json", return_value={"abc123": "halted"}):
             assert is_running("abc123") is False
@@ -351,7 +357,7 @@ class TestSiteFile:
 
 class TestSession:
     def test_session_load_empty(self, tmp_path):
-        from cli_anything.local.core import session as session_mod
+        from wp_local.local.core import session as session_mod
 
         nonexistent = str(tmp_path / "no_such_file.json")
         with patch.object(session_mod, "SESSION_FILE", nonexistent):
@@ -360,7 +366,7 @@ class TestSession:
         assert s.active_site_id is None
 
     def test_session_save_and_load(self, tmp_path):
-        from cli_anything.local.core import session as session_mod
+        from wp_local.local.core import session as session_mod
 
         session_file = str(tmp_path / "session.json")
         with patch.object(session_mod, "SESSION_FILE", session_file), patch.object(
@@ -376,7 +382,7 @@ class TestSession:
         assert s2.active_site_id == "abc123"
 
     def test_session_set_active_site(self, tmp_path):
-        from cli_anything.local.core import session as session_mod
+        from wp_local.local.core import session as session_mod
 
         session_file = str(tmp_path / "session.json")
         with patch.object(session_mod, "SESSION_FILE", session_file), patch.object(
@@ -388,7 +394,7 @@ class TestSession:
         assert s.active_site_id == "site_xyz"
 
     def test_session_clear(self, tmp_path):
-        from cli_anything.local.core import session as session_mod
+        from wp_local.local.core import session as session_mod
 
         session_file = str(tmp_path / "session.json")
         with patch.object(session_mod, "SESSION_FILE", session_file), patch.object(
