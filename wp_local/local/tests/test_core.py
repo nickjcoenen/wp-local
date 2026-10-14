@@ -197,6 +197,9 @@ class TestGetWpRoot:
         (public / "wp-cli.yml").write_text("path: core/\n")
         assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public / "core")
 
+        (public / "wp-cli.yml").write_text('path: "wp core/" # quoted\n')
+        assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public / "wp core")
+
         (public / "wp-load.php").write_text("<?php\n")
         assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public)
 

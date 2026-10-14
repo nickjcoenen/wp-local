@@ -78,9 +78,9 @@ def _get_wp_root(site_data: dict) -> str:
     if not os.path.exists(os.path.join(root, "wp-load.php")) and os.path.exists(cfg):
         with open(cfg) as f:
             # shortcut: reads a top-level `path:` line only, use a YAML parser if wp-cli.yml grows nested config.
-            m = re.search(r"^path:\s*['\"]?([^'\"\s#]+)", f.read(), re.M)
+            m = re.search(r"""^path:[ \t]*(?:"([^"]+)"|'([^']+)'|([^\s#'"]+))""", f.read(), re.M)
         if m:
-            return os.path.normpath(os.path.join(root, m.group(1)))
+            return os.path.normpath(os.path.join(root, next(g for g in m.groups() if g)))
     return root
 
 
