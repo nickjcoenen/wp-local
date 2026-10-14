@@ -189,6 +189,20 @@ class TestGetWpRoot:
         result = wpcli_backend._get_wp_root(site_data)
         assert result == "/Users/nick/Local Sites/mysite/app/public"
 
+    def test_get_wp_root_reads_wp_cli_yml(self, tmp_path):
+        from wp_local.local.utils import wpcli_backend
+
+        public = tmp_path / "app" / "public"
+        (public / "core").mkdir(parents=True)
+        (public / "wp-cli.yml").write_text("path: core/\n")
+        assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public / "core")
+
+        (public / "wp-cli.yml").write_text('path: "wp core/" # quoted\n')
+        assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public / "wp core")
+
+        (public / "wp-load.php").write_text("<?php\n")
+        assert wpcli_backend._get_wp_root({"path": str(tmp_path)}) == str(public)
+
 
 class TestRunWpCli:
     def _fake_site_data(self):

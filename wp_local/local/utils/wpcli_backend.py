@@ -8,6 +8,7 @@ root.
 
 import glob
 import os
+import re
 import subprocess
 
 from wp_local.local.core.site import (
@@ -68,9 +69,19 @@ def _get_wp_root(site_data: dict) -> str:
         site_data: Site configuration dict from sites.json.
 
     Returns:
-        Absolute path to the WordPress installation (app/public).
+        Absolute path to the WordPress installation: app/public, or the
+        folder its wp-cli.yml names in `path:` when core is not in app/public.
     """
-    return os.path.join(site_data["path"], "app", "public")
+    root = os.path.join(site_data["path"], "app", "public")
+    # --path overrides wp-cli.yml, so a core-in-subfolder site (`path: core/`) needs the folder here.
+    cfg = os.path.join(root, "wp-cli.yml")
+    if not os.path.exists(os.path.join(root, "wp-load.php")) and os.path.exists(cfg):
+        with open(cfg) as f:
+            # shortcut: reads a top-level `path:` line only, use a YAML parser if wp-cli.yml grows nested config.
+            m = re.search(r"""^path:[ \t]*(?:"([^"]+)"|'([^']+)'|([^\s#'"]+))""", f.read(), re.M)
+        if m:
+            return os.path.normpath(os.path.join(root, next(g for g in m.groups() if g)))
+    return root
 
 
 def run_wp_cli(
