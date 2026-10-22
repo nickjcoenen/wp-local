@@ -104,14 +104,7 @@ class TestMySQLReal:
         _inject_mysql_path()
 
     def test_run_query_select_version(self):
-        """Verify MySQL is reachable.
-
-        Note: mysql_backend uses --batch --silent which causes the first output
-        line to be treated as a column-name header; single-result queries like
-        SELECT VERSION() therefore return [] from run_query (one line consumed
-        as header, no data lines remain).  We use SHOW DATABASES, which always
-        returns multiple rows, as a reliable connectivity check.
-        """
+        """Verify MySQL is reachable."""
         from wp_local.local.utils.mysql_backend import run_query
 
         rows = run_query("iw1zR_3qf", "SHOW DATABASES")
