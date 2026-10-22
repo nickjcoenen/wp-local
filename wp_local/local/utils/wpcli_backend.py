@@ -17,6 +17,7 @@ from wp_local.local.core.site import (
     get_run_dir,
     version_key_from_path,
 )
+from wp_local.local.utils.mysql_backend import _find_mysql_binary
 
 WPCLI_PHAR = (
     "/Applications/Local.app/Contents/Resources/extraResources/bin/wp-cli/wp-cli.phar"
@@ -161,6 +162,13 @@ def run_wp_cli(
     env = os.environ.copy()
     env["MYSQL_HOME"] = os.path.join(get_run_dir(site_id), "conf", "mysql")
     env["WP_CLI_CACHE_DIR"] = "/tmp/wp-cli-cache"
+    # `wp db *` shells out to mysql/mysqlcheck/mysqldump, partly with --no-defaults,
+    # so MYSQL_HOME is ignored there; the client always reads MYSQL_UNIX_PORT.
+    env["MYSQL_UNIX_PORT"] = socket
+    try:
+        env["PATH"] = os.path.dirname(_find_mysql_binary()) + os.pathsep + env.get("PATH", "")
+    except RuntimeError:
+        pass  # only `wp db *` needs the client; let other commands run
 
     return subprocess.run(
         cmd,
