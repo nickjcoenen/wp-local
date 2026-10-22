@@ -71,7 +71,7 @@ def run_query(site_id: str, sql: str) -> list[dict]:
     Connects via the site's unix socket using the default Local credentials
     (root / root, database: local).
 
-    Tab-separated output from mysql --batch --silent is parsed so that the
+    Tab-separated output from mysql --batch is parsed so that the
     first row becomes the column names and every subsequent row becomes a dict.
 
     Args:
@@ -94,7 +94,6 @@ def run_query(site_id: str, sql: str) -> list[dict]:
         "local",
         "-e", sql,
         "--batch",
-        "--silent",
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
