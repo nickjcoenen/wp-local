@@ -256,6 +256,25 @@ class TestRunWpCli:
         env = mock_run.call_args.kwargs.get("env", {})
         assert "MYSQL_HOME" in env
         assert "abc123" in env["MYSQL_HOME"]
+        assert env["MYSQL_UNIX_PORT"].endswith("mysqld.sock")
+
+
+class TestRunQuery:
+    def test_first_row_is_header(self):
+        from wp_local.local.utils import mysql_backend
+
+        fake_proc = MagicMock(returncode=0, stdout="option_value\nhttp://x.test\n")
+
+        with patch.object(
+            mysql_backend, "_get_socket", return_value="/tmp/s.sock"
+        ), patch.object(
+            mysql_backend, "_find_mysql_binary", return_value="/fake/mysql"
+        ), patch("subprocess.run", return_value=fake_proc) as mock_run:
+            rows = mysql_backend.run_query("abc123", "select 1")
+
+        assert rows == [{"option_value": "http://x.test"}]
+        # --batch plus --silent drops the header row
+        assert "--silent" not in mock_run.call_args[0][0]
 
 
 # ---------------------------------------------------------------------------
